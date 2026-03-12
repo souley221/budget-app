@@ -20,6 +20,19 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  CREATE TABLE IF NOT EXISTS bank_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    nom TEXT NOT NULL,
+    banque TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'courant',
+    solde REAL NOT NULL DEFAULT 0,
+    iban_fin TEXT DEFAULT '',
+    couleur TEXT DEFAULT '#3b82f6',
+    synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS credits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,

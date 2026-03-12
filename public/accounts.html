@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comptes Bancaires — Budget Personnel</title>
+  <link rel="stylesheet" href="/css/accounts.css" />
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <span style="color:var(--muted);font-size:.9rem">Chargement de vos comptes…</span>
+</div>
+
+<!-- Navigation -->
+<nav class="top-nav">
+  <h1>Budget <span>Personnel</span></h1>
+  <div class="nav-links">
+    <a href="/dashboard.html" class="nav-link">📊 Dashboard</a>
+    <a href="/accounts.html"  class="nav-link active">🏦 Comptes</a>
+  </div>
+  <div class="nav-actions">
+    <span class="save-status" id="saveStatus">✓ Sauvegardé</span>
+    <span class="user-badge" id="userBadge">👤 …</span>
+    <button class="btn btn-ghost" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+
+<!-- Bandeau info synchronisation -->
+<div class="sync-banner">
+  <span class="sync-banner-icon">🔄</span>
+  <div class="sync-banner-text">
+    <strong>Synchronisation manuelle</strong>
+    <span>Mettez à jour le solde de chaque compte après avoir consulté votre application bancaire. Cliquez sur "Mettre à jour" pour saisir le nouveau solde.</span>
+  </div>
+  <button class="btn btn-primary" onclick="openAddModal()">＋ Ajouter un compte</button>
+</div>
+
+<!-- KPIs -->
+<div class="section-title">Vue d'ensemble</div>
+<div class="kpi-grid" id="kpiGrid">
+  <div class="kpi blue">
+    <div class="kpi-label">Patrimoine net</div>
+    <div class="kpi-value" style="color:var(--blue)" id="kpi-patrimoine"></div>
+    <div class="kpi-sub" id="kpi-nb-comptes"></div>
+  </div>
+  <div class="kpi green">
+    <div class="kpi-label">Total épargne</div>
+    <div class="kpi-value" style="color:var(--green)" id="kpi-epargne"></div>
+    <div class="kpi-sub" id="kpi-nb-epargne"></div>
+  </div>
+  <div class="kpi purple">
+    <div class="kpi-label">Comptes courants</div>
+    <div class="kpi-value" style="color:var(--purple)" id="kpi-courant"></div>
+    <div class="kpi-sub" id="kpi-nb-courant"></div>
+  </div>
+  <div class="kpi red">
+    <div class="kpi-label">Dettes / Crédits</div>
+    <div class="kpi-value" style="color:var(--red)" id="kpi-dettes"></div>
+    <div class="kpi-sub" id="kpi-nb-dettes"></div>
+  </div>
+</div>
+
+<!-- Comptes -->
+<div class="section-title">Mes comptes</div>
+<div class="accounts-grid" id="accountsGrid"></div>
+
+<!-- Modal ajout / modification -->
+<div class="modal-overlay" id="accountModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="accountModalTitle">Ajouter un compte</h3>
+      <button class="modal-close" onclick="closeAccountModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="accountId" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nom du compte</label>
+          <input type="text" id="aNom" placeholder="Ex: Compte principal" />
+        </div>
+        <div class="form-group">
+          <label>Banque</label>
+          <input type="text" id="aBanque" placeholder="Ex: BNP Paribas" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type de compte</label>
+          <select id="aType">
+            <option value="courant">Compte courant</option>
+            <option value="epargne">Livret / Épargne</option>
+            <option value="pea">PEA</option>
+            <option value="assurance">Assurance vie</option>
+            <option value="investissement">Compte titres</option>
+            <option value="crypto">Crypto</option>
+            <option value="dette">Dette / Crédit</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Solde actuel (€)</label>
+          <input type="number" id="aSolde" placeholder="0.00" step="0.01" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>4 derniers chiffres IBAN</label>
+          <input type="text" id="aIban" placeholder="Ex: 4242" maxlength="4" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Couleur</label>
+        <div class="color-picker" id="colorPicker"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAccountModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAccount()">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal mise à jour rapide du solde -->
+<div class="modal-overlay" id="updateModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3 id="updateModalTitle">Mettre à jour le solde</h3>
+      <button class="modal-close" onclick="closeUpdateModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="number" class="quick-solde-input" id="newSolde" step="0.01" placeholder="0.00" />
+      <p class="quick-solde-label">Saisissez le solde affiché dans votre application bancaire</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUpdateModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmUpdateSolde()">✓ Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/accounts.js"></script>
+</body>
+</html>

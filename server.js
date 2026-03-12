@@ -104,6 +104,42 @@ app.delete('/api/credits/:id', auth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Bank Accounts ─────────────────────────────────────
+app.get('/api/accounts', auth, (req, res) => {
+  const rows = db.prepare('SELECT * FROM bank_accounts WHERE user_id = ? ORDER BY id').all(req.user.id);
+  res.json(rows.map(r => ({
+    id: r.id, nom: r.nom, banque: r.banque, type: r.type,
+    solde: r.solde, ibanFin: r.iban_fin, couleur: r.couleur,
+    syncedAt: r.synced_at
+  })));
+});
+
+app.post('/api/accounts', auth, (req, res) => {
+  const { nom, banque, type, solde, ibanFin, couleur } = req.body;
+  if (!nom || !banque) return res.status(400).json({ error: 'Nom et banque requis' });
+  const info = db.prepare(
+    'INSERT INTO bank_accounts (user_id, nom, banque, type, solde, iban_fin, couleur, synced_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)'
+  ).run(req.user.id, nom, banque, type||'courant', solde||0, ibanFin||'', couleur||'#3b82f6');
+  res.json({ id: info.lastInsertRowid, nom, banque, type: type||'courant', solde: solde||0, ibanFin: ibanFin||'', couleur: couleur||'#3b82f6', syncedAt: new Date().toISOString() });
+});
+
+app.put('/api/accounts/:id', auth, (req, res) => {
+  const acc = db.prepare('SELECT * FROM bank_accounts WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  if (!acc) return res.status(404).json({ error: 'Compte introuvable' });
+  const { nom, banque, type, solde, ibanFin, couleur } = req.body;
+  db.prepare(
+    'UPDATE bank_accounts SET nom=?, banque=?, type=?, solde=?, iban_fin=?, couleur=?, synced_at=CURRENT_TIMESTAMP WHERE id=?'
+  ).run(nom, banque, type, solde, ibanFin||'', couleur, req.params.id);
+  res.json({ ok: true });
+});
+
+app.delete('/api/accounts/:id', auth, (req, res) => {
+  const acc = db.prepare('SELECT * FROM bank_accounts WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  if (!acc) return res.status(404).json({ error: 'Compte introuvable' });
+  db.prepare('DELETE FROM bank_accounts WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 // ─── Fallback → login ──────────────────────────────────
 app.get('/{*path}', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
