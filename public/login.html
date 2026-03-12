@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Personnel — Connexion</title>
+  <link rel="stylesheet" href="/css/login.css" />
+</head>
+<body>
+<div class="container">
+  <div class="logo">
+    <div class="logo-icon">💰</div>
+    <h1>Budget <span>Personnel</span></h1>
+    <p>Gérez vos finances en toute sécurité</p>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchMode('login')">Connexion</button>
+      <button class="tab" onclick="switchMode('register')">Créer un compte</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="form active" id="formLogin">
+      <div class="alert" id="loginAlert"></div>
+      <div class="form-group">
+        <label>Nom d'utilisateur</label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="loginUsername" placeholder="Votre identifiant" autocomplete="username" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+      </div>
+      <button class="btn-submit" id="btnLogin" onclick="login()">Se connecter</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="form" id="formRegister">
+      <div class="alert" id="registerAlert"></div>
+      <div class="form-group">
+        <label>Nom d'utilisateur</label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="regUsername" placeholder="Choisissez un identifiant" autocomplete="username" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="regPassword" placeholder="Min. 6 caractères" autocomplete="new-password" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Confirmer le mot de passe</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="regPassword2" placeholder="Répétez le mot de passe" autocomplete="new-password" />
+        </div>
+      </div>
+      <button class="btn-submit" id="btnRegister" onclick="register()">Créer mon compte</button>
+    </div>
+  </div>
+
+  <p class="footer-note">Données stockées localement sur votre serveur</p>
+</div>
+
+<script src="/js/login.js"></script>
+</body>
+</html>

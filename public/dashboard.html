@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Budget Personnel 2026</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <span style="color:var(--muted);font-size:.9rem">Chargement de vos données…</span>
+</div>
+
+<!-- Header -->
+<header>
+  <h1>Budget <span>Personnel</span> — 2026</h1>
+  <div class="header-actions">
+    <span class="save-status" id="saveStatus">✓ Sauvegardé</span>
+    <span class="user-badge" id="userBadge">👤 …</span>
+    <button class="btn btn-ghost" onclick="logout()">Déconnexion</button>
+  </div>
+</header>
+
+<!-- Empty state (affiché quand aucune donnée) -->
+<div id="emptyState" style="display:none">
+  <div class="empty-state-box">
+    <div class="empty-icon">📊</div>
+    <h2>Aucune donnée pour le moment</h2>
+    <p>Cliquez sur un mois dans le tableau ci-dessous pour commencer à saisir vos revenus et dépenses.</p>
+  </div>
+</div>
+
+<!-- Contenu principal (masqué tant qu'il n'y a pas de données) -->
+<div id="mainContent">
+
+  <!-- Crédits -->
+  <div class="section-title">Crédits en cours</div>
+  <div class="credit-grid" id="creditGrid"></div>
+
+  <!-- KPIs -->
+  <div class="section-title">Vue d'ensemble annuelle</div>
+  <div class="kpi-grid">
+    <div class="kpi blue">
+      <div class="kpi-label">Revenus annuels</div>
+      <div class="kpi-value" style="color:var(--blue)" id="kpi-revenus"></div>
+      <div class="kpi-sub" id="kpi-rev-moy"></div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Dépenses annuelles</div>
+      <div class="kpi-value neg" id="kpi-depenses"></div>
+      <div class="kpi-sub" id="kpi-dep-moy"></div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Épargne annuelle</div>
+      <div class="kpi-value pos" id="kpi-epargne"></div>
+      <div class="kpi-sub" id="kpi-ep-moy"></div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-label">Taux d'épargne</div>
+      <div class="kpi-value" style="color:var(--purple)" id="kpi-taux"></div>
+      <div class="kpi-sub">du revenu annuel</div>
+    </div>
+    <div class="kpi yellow">
+      <div class="kpi-label">Meilleur mois</div>
+      <div class="kpi-value" style="color:var(--yellow)" id="kpi-best"></div>
+      <div class="kpi-sub" id="kpi-best-mois"></div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="section-title">Graphiques</div>
+  <div class="charts-grid">
+    <div class="card" style="grid-column:1/-1">
+      <h2>Revenus vs Dépenses vs Épargne par mois</h2>
+      <div class="chart-wrap" style="height:300px"><canvas id="chartOverview"></canvas></div>
+    </div>
+  </div>
+  <div class="charts-grid">
+    <div class="card">
+      <h2>Capacité d'épargne mensuelle</h2>
+      <div class="chart-wrap" style="height:260px"><canvas id="chartSavings"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Répartition des dépenses annuelles</h2>
+      <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+        <div class="chart-wrap" style="height:260px;flex:0 0 200px"><canvas id="chartPie"></canvas></div>
+        <div class="legend-list" id="pieLegend" style="flex:1;min-width:160px;padding-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /mainContent -->
+
+<!-- Table toujours visible (point d'entrée pour ajouter des données) -->
+<div class="card" style="margin-top:24px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2 style="margin:0">Détail mensuel</h2>
+    <span style="font-size:.75rem;color:var(--blue)">✏️ Cliquez sur un mois pour modifier</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Mois</th>
+          <th>Total Revenus</th>
+          <th>Total Dépenses</th>
+          <th>Épargne</th>
+          <th>Taux épargne</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+      <tfoot id="tableFoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Modal mois -->
+<div class="modal-overlay" id="monthModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="monthModalTitle">Modifier</h3>
+      <button class="modal-close" onclick="closeMonthModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('revenus')">Revenus</button>
+        <button class="modal-tab" onclick="switchTab('depenses')">Dépenses</button>
+      </div>
+      <div id="tabRevenus"></div>
+      <div id="tabDepenses" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeMonthModal()">Annuler</button>
+      <button class="btn" style="background:var(--green);color:#fff" onclick="saveMonth()">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal crédit -->
+<div class="modal-overlay" id="creditModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="creditModalTitle">Ajouter un crédit</h3>
+      <button class="modal-close" onclick="closeCreditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="creditId" />
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Nom du crédit</label>
+        <input type="text" id="cNom" placeholder="Ex: Crédit auto" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Capital emprunté (€)</label>
+          <input type="number" id="cCapitalInitial" min="0" step="100" />
+        </div>
+        <div class="form-group">
+          <label>Capital restant dû (€)</label>
+          <input type="number" id="cCapitalRestant" min="0" step="100" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mensualité (€)</label>
+          <input type="number" id="cMensualite" min="0" step="1" />
+        </div>
+        <div class="form-group">
+          <label>Taux annuel (%) — optionnel</label>
+          <input type="number" id="cTaux" min="0" step="0.01" placeholder="0" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCreditModal()">Annuler</button>
+      <button class="btn" style="background:var(--green);color:#fff" onclick="saveCredit()">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>
