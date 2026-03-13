@@ -44,6 +44,38 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS gc_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    access_expires_at INTEGER NOT NULL,
+    refresh_expires_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS gc_requisitions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    gc_req_id TEXT NOT NULL UNIQUE,
+    institution_id TEXT NOT NULL,
+    institution_name TEXT,
+    institution_logo TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 `);
+
+// ── Migrations : colonnes GoCardless sur bank_accounts ──────────────────
+[
+  ['gc_account_id', 'TEXT DEFAULT NULL'],
+  ['gc_req_id',     'TEXT DEFAULT NULL'],
+  ['is_gc',         'INTEGER DEFAULT 0'],
+].forEach(([col, def]) => {
+  try { db.exec(`ALTER TABLE bank_accounts ADD COLUMN ${col} ${def}`); }
+  catch (_) { /* colonne déjà présente */ }
+});
 
 module.exports = db;

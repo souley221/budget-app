@@ -1,9 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const cors    = require('cors');
 const path    = require('path');
 const db      = require('./database');
+const eb      = require('./enablebanking');
 
 const app    = express();
 const PORT   = 3000;
@@ -110,7 +112,7 @@ app.get('/api/accounts', auth, (req, res) => {
   res.json(rows.map(r => ({
     id: r.id, nom: r.nom, banque: r.banque, type: r.type,
     solde: r.solde, ibanFin: r.iban_fin, couleur: r.couleur,
-    syncedAt: r.synced_at
+    syncedAt: r.synced_at, isGc: r.is_gc === 1
   })));
 });
 
@@ -138,6 +140,64 @@ app.delete('/api/accounts/:id', auth, (req, res) => {
   if (!acc) return res.status(404).json({ error: 'Compte introuvable' });
   db.prepare('DELETE FROM bank_accounts WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
+});
+
+// ─── Enable Banking Open Banking ───────────────────────────────────────────
+
+// GET /api/gc/status — credentials configurés ?
+app.get('/api/gc/status', auth, (_req, res) => {
+  res.json({ configured: eb.isConfigured() });
+});
+
+// Cache institutions en mémoire (5 min)
+let institutionsCache = { data: {}, ts: 0 };
+
+// GET /api/gc/institutions?country=FR — liste des banques
+app.get('/api/gc/institutions', auth, async (req, res) => {
+  if (!eb.isConfigured()) return res.status(503).json({ error: 'Enable Banking non configuré' });
+  try {
+    const country  = req.query.country || 'FR';
+    const cacheKey = country;
+    if (institutionsCache.data[cacheKey] && Date.now() - institutionsCache.ts < 5 * 60 * 1000) {
+      return res.json(institutionsCache.data[cacheKey]);
+    }
+    const data = await eb.getInstitutions(country);
+    institutionsCache = { data: { ...institutionsCache.data, [cacheKey]: data }, ts: Date.now() };
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/gc/connect — démarrer le flux OAuth pour une banque
+app.post('/api/gc/connect', auth, async (req, res) => {
+  if (!eb.isConfigured()) return res.status(503).json({ error: 'Enable Banking non configuré' });
+  try {
+    const { institutionId, institutionName, institutionLogo } = req.body;
+    if (!institutionId) return res.status(400).json({ error: 'institutionId requis' });
+    const appUrl     = process.env.APP_URL || 'http://localhost:3000';
+    const redirectUrl = `${appUrl}/bank-connect.html`;
+    const result = await eb.createSession(db, req.user.id, institutionId, institutionName, institutionLogo, redirectUrl);
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/gc/finalize/:reqId — finaliser après retour OAuth + importer les comptes
+app.post('/api/gc/finalize/:reqId', auth, async (req, res) => {
+  if (!eb.isConfigured()) return res.status(503).json({ error: 'Enable Banking non configuré' });
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: 'code OAuth manquant' });
+    const result = await eb.finalizeSession(db, req.user.id, req.params.reqId, code);
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/gc/refresh/:accountId — rafraîchir le solde d'un compte
+app.post('/api/gc/refresh/:accountId', auth, async (req, res) => {
+  if (!eb.isConfigured()) return res.status(503).json({ error: 'Enable Banking non configuré' });
+  try {
+    const solde = await eb.refreshAccount(db, +req.params.accountId, req.user.id);
+    res.json({ ok: true, solde });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── Fallback → login ──────────────────────────────────

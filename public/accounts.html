@@ -18,8 +18,9 @@
 <nav class="top-nav">
   <h1>Budget <span>Personnel</span></h1>
   <div class="nav-links">
-    <a href="/dashboard.html" class="nav-link">📊 Dashboard</a>
-    <a href="/accounts.html"  class="nav-link active">🏦 Comptes</a>
+    <a href="/dashboard.html"   class="nav-link">📊 Dashboard</a>
+    <a href="/accounts.html"   class="nav-link active">🏦 Comptes</a>
+    <a href="/bank-connect.html" class="nav-link">🔗 Connecter</a>
   </div>
   <div class="nav-actions">
     <span class="save-status" id="saveStatus">✓ Sauvegardé</span>
@@ -35,7 +36,10 @@
     <strong>Synchronisation manuelle</strong>
     <span>Mettez à jour le solde de chaque compte après avoir consulté votre application bancaire. Cliquez sur "Mettre à jour" pour saisir le nouveau solde.</span>
   </div>
-  <button class="btn btn-primary" onclick="openAddModal()">＋ Ajouter un compte</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a href="/bank-connect.html" class="btn btn-primary" style="text-decoration:none">🔗 Connecter une banque</a>
+    <button class="btn btn-ghost" onclick="openAddModal()">＋ Saisie manuelle</button>
+  </div>
 </div>
 
 <!-- KPIs -->

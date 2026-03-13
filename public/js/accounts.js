@@ -138,7 +138,10 @@ function renderAccounts() {
             <div class="account-info-bank">${a.banque}</div>
           </div>
         </div>
-        <span class="account-type-badge" style="background:${meta.bg};color:${meta.color}">${meta.label}</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="account-type-badge" style="background:${meta.bg};color:${meta.color}">${meta.label}</span>
+          ${a.isGc ? `<span class="gc-badge">🔗 Open Banking</span>` : ''}
+        </div>
       </div>
 
       <div class="account-balance">
@@ -148,11 +151,14 @@ function renderAccounts() {
 
       <div class="account-meta">
         <span class="account-iban">${a.ibanFin ? '•••• ' + a.ibanFin : ''}</span>
-        <span title="${new Date(a.syncedAt).toLocaleString('fr-FR')}">🔄 ${timeAgo(a.syncedAt)}</span>
+        <span title="${new Date(a.syncedAt).toLocaleString('fr-FR')}">🕐 ${timeAgo(a.syncedAt)}</span>
       </div>
 
       <div class="account-actions">
-        <button class="btn btn-primary btn-sm" onclick="openUpdateModal(${a.id})">↑ Mettre à jour</button>
+        ${a.isGc
+          ? `<button class="btn btn-primary btn-sm" onclick="refreshGcAccount(${a.id})">🔄 Actualiser</button>`
+          : `<button class="btn btn-primary btn-sm" onclick="openUpdateModal(${a.id})">↑ Mettre à jour</button>`
+        }
         <button class="btn btn-ghost   btn-sm" onclick="openEditModal(${a.id})">✏️</button>
         <button class="btn btn-danger  btn-sm" onclick="deleteAccount(${a.id})">🗑️</button>
       </div>
@@ -164,6 +170,24 @@ function renderAccounts() {
       <span class="plus">＋</span>
       <span>Ajouter un compte</span>
     </div>`;
+}
+
+async function refreshGcAccount(id) {
+  const card = document.getElementById('acc-' + id);
+  const btn = card ? card.querySelector('.btn-primary') : null;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ …'; }
+
+  try {
+    const r = await fetch(`/api/gc/refresh/${id}`, { method: 'POST', headers: authHeaders() });
+    if (!r.ok) { const e = await r.json(); alert('Erreur : ' + (e.error || 'Impossible de rafraîchir')); return; }
+    const { solde } = await r.json();
+    const idx = accounts.findIndex(x => x.id === id);
+    accounts[idx] = { ...accounts[idx], solde, syncedAt: new Date().toISOString() };
+    renderAll();
+    showSave();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Actualiser'; }
+  }
 }
 
 function renderAll() {
@@ -309,7 +333,11 @@ document.addEventListener('keydown', e => {
 //  INIT
 // ═══════════════════════════════════════════════════════
 (async () => {
-  await loadAccounts();
+  try {
+    await loadAccounts();
+  } catch (e) {
+    console.error('Erreur chargement comptes:', e);
+  }
   document.getElementById('loadingOverlay').classList.add('hidden');
   renderAll();
 })();

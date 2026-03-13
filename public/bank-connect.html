@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connecter une banque — Budget Personnel</title>
+  <link rel="stylesheet" href="/css/accounts.css" />
+  <link rel="stylesheet" href="/css/bank-connect.css" />
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <span style="color:var(--muted);font-size:.9rem">Chargement…</span>
+</div>
+
+<!-- Navigation -->
+<nav class="top-nav">
+  <h1>Budget <span>Personnel</span></h1>
+  <div class="nav-links">
+    <a href="/dashboard.html" class="nav-link">📊 Dashboard</a>
+    <a href="/accounts.html"  class="nav-link">🏦 Comptes</a>
+    <a href="/bank-connect.html" class="nav-link active">🔗 Connecter</a>
+  </div>
+  <div class="nav-actions">
+    <span class="user-badge" id="userBadge">👤 …</span>
+    <button class="btn btn-ghost" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+
+<div class="page-container">
+
+  <!-- Breadcrumb -->
+  <div class="bc-steps" id="bcSteps">
+    <div class="bc-step active" id="step-indicator-1">1 · Choisir sa banque</div>
+    <div class="bc-sep">›</div>
+    <div class="bc-step" id="step-indicator-2">2 · Autoriser l'accès</div>
+    <div class="bc-sep">›</div>
+    <div class="bc-step" id="step-indicator-3">3 · Importer les comptes</div>
+  </div>
+
+  <!-- ═══ ÉTAPE 1 : Recherche banque ═══ -->
+  <div id="step1" class="step-panel">
+    <div class="connect-header">
+      <h2>Connecter votre banque</h2>
+      <p>Recherchez votre établissement bancaire. La connexion utilise le standard <strong>Open Banking PSD2</strong> — vos identifiants ne transitent jamais par cette application.</p>
+    </div>
+
+    <!-- Non configuré -->
+    <div id="notConfigured" style="display:none">
+      <div class="info-box warning">
+        <div style="font-size:1.8rem;margin-bottom:12px">⚙️</div>
+        <h3>Enable Banking non configuré</h3>
+        <p>Pour activer la synchronisation bancaire, créez un compte gratuit sur Enable Banking (PSD2 — BNP, SG, LCL, CA, Revolut…) :</p>
+        <ol class="setup-steps">
+          <li>Inscrivez-vous sur <strong>enablebanking.com/sign-in</strong> (gratuit, sans carte)</li>
+          <li>Allez dans <strong>Applications → New application</strong></li>
+          <li>Copiez votre <strong>Application ID</strong> et téléchargez la <strong>clé privée</strong> (<code>.pem</code>)</li>
+          <li>Placez le fichier <code>.pem</code> à la racine du projet et créez le fichier <code>.env</code> :</li>
+        </ol>
+        <pre class="code-block">EB_APPLICATION_ID=votre_application_id
+EB_PRIVATE_KEY_PATH=./enablebanking-private.pem
+APP_URL=http://localhost:3000</pre>
+        <p style="margin-top:12px;font-size:.8rem;color:var(--muted)">Redémarrez le serveur (<code>npm start</code>) après avoir créé le fichier.</p>
+      </div>
+    </div>
+
+    <!-- Configuré -->
+    <div id="searchSection" style="display:none">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="BNP Paribas, Société Générale, Revolut…" oninput="filterInstitutions()" />
+      </div>
+
+      <div class="country-tabs">
+        <button class="ctab active" onclick="loadCountry('FR', this)">🇫🇷 France</button>
+        <button class="ctab" onclick="loadCountry('BE', this)">🇧🇪 Belgique</button>
+        <button class="ctab" onclick="loadCountry('DE', this)">🇩🇪 Allemagne</button>
+        <button class="ctab" onclick="loadCountry('GB', this)">🇬🇧 Royaume-Uni</button>
+      </div>
+
+      <div id="institutionsGrid" class="institutions-grid"></div>
+      <div id="institutionsEmpty" style="display:none" class="empty-hint">Aucune banque trouvée pour cette recherche.</div>
+      <div id="institutionsLoading" class="inst-loading">
+        <div class="spinner" style="width:24px;height:24px;border-width:2px"></div>
+        <span>Chargement des banques…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ÉTAPE 2 : Redirect en cours ═══ -->
+  <div id="step2" class="step-panel step-centered" style="display:none">
+    <div class="connect-header">
+      <h2>Redirection vers votre banque</h2>
+      <p>Vous allez être redirigé vers la page d'authentification de votre banque. Une fois connecté, vous reviendrez automatiquement ici.</p>
+    </div>
+    <div class="redirect-card" id="redirectCard">
+      <div class="redirect-bank-icon" id="redirectBankLogo"></div>
+      <div class="redirect-bank-name" id="redirectBankName"></div>
+      <div class="redirect-spinner">
+        <div class="spinner"></div>
+        <span>Préparation de la connexion sécurisée…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ÉTAPE 3 : Import des comptes ═══ -->
+  <div id="step3" class="step-panel step-centered" style="display:none">
+    <div class="connect-header">
+      <h2 id="step3Title">Comptes trouvés</h2>
+      <p id="step3Desc">Les comptes ci-dessous ont été récupérés depuis votre banque. Ils sont maintenant synchronisés dans votre application.</p>
+    </div>
+    <div id="importedAccountsList" class="imported-list"></div>
+    <div class="step3-actions">
+      <a href="/accounts.html" class="btn btn-primary" style="text-decoration:none;padding:12px 28px;font-size:.95rem">
+        ✓ Voir mes comptes
+      </a>
+      <button class="btn btn-ghost" onclick="resetFlow()">
+        ＋ Connecter une autre banque
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/bank-connect.js"></script>
+</body>
+</html>
